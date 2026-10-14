@@ -9,7 +9,9 @@
 
 ## Технологии
 
-- Язык: Python (FastAPI)
+- Язык: C# (.NET 8)
+- Фреймворк: ASP.NET Core Web API
+- ORM: Entity Framework Core
 - Хранение: SQLite
 - Фронтенд: планируется позже
 
