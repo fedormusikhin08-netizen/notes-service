@@ -1,83 +1,72 @@
-# Учётная заметок
+# Сервис заметок
 
-Учебный сервис для работы с текстовыми заметками.
+Небольшое API для текстовых заметок на .NET 8. Сделано для контрольной точки
+по контейнерам, названия полей и формат ответов взяты из api-plan.md — это
+зафиксированная тема проекта.
 
-## Описание
+## Что умеет API
 
-Приложение позволяет пользователю создавать текстовые заметки, редактировать,
-удалять и искать по ним. Основная цель - надежно хранить заметки в базе данных.
+- GET /health — возвращает OK, простая проверка что сервис жив
+- GET /notes — все заметки списком
+- GET /notes/{id} — одна заметка по номеру, если её нет — 404
 
-В рамках контрольной точки по контейнерам реализовано минимальное API:
-список заметок, получение одной заметки и проверка живости сервиса.
-Данные пока лежат в памяти приложения, база данных подключится позже
-по плану из api-plan.md.
+Данные пока лежат в памяти процесса: перезапустил контейнер — список вернулся
+к исходному. База (по плану это EF Core и SQLite) подключится следующим
+этапом, для этой КТ хватает и такого варианта.
 
-## Технологии
+Поля заметки в JSON: id, title, text, created_at — как в api-plan.md.
 
-- Язык: C# (.NET 8)
-- Фреймворк: ASP.NET Core Web API
-- ORM: Entity Framework Core
-- Хранение: SQLite
-- Тестирование: автоматическое тестирование
-- Контейнеризация: Docker
+## Из чего состоит проект
 
-## Состав проекта
+Program.cs — сам API, весь в одном файле (minimal API);
+NotesService.csproj — проект .NET 8;
+Dockerfile — многоступенчатая сборка: первый этап компилируем в образе с SDK,
+затем в образ только с рантаймом переносим опубликованное приложение;
+.dockerignore — чтобы bin, obj и md не попадали в контекст сборки;
+api-plan.md и project-notes.md — документация по теме;
+README.md — этот файл.
 
-- README.md - описание проекта (этот файл)
-- project-notes.md - рабочие заметки проекта
-- api-plan.md - план REST API
-- Program.cs - код API
-- NotesService.csproj - файл проекта
-- Dockerfile - сборка образа контейнера
-- .dockerignore - файлы, которые не нужны внутри образа
+## Сборка и запуск
 
-## Endpoints
+Нужен Docker Desktop с запущенным движком (в трее пишет Engine running).
 
-- GET /health - проверка, что сервис жив
-- GET /notes - список всех заметок
-- GET /notes/{id} - одна заметка по номеру
-
-Формат заметки: id, title, text, created_at - как в api-plan.md.
-
-## Запуск в Docker
-
-Сборка образа:
+Собираю образ:
 
 docker build -t notes-service .
 
-Запуск контейнера:
+Запускаю контейнер, пробрасываю порт 8080 наружу:
 
 docker run -d -p 8080:8080 --name notes-service-container notes-service
 
-Проверка в браузере или через curl:
+Проверяю API через curl (в браузере по адресу localhost:8080 тоже откроется):
 
 curl http://localhost:8080/health
 curl http://localhost:8080/notes
 curl http://localhost:8080/notes/2
 
-## Выводы команд
+## Реальные выводы
 
-Сборка образа (docker build):
+Сборка прошла без ошибок, хвост вывода docker build:
 
 #13 6.779   NotesService -> /app/bin/Release/net8.0/NotesService.dll
 #13 6.868   NotesService -> /app/out/
 #15 naming to docker.io/library/notes-service:latest
 #15 DONE 11.2s
 
-Запуск контейнера (docker run):
+Команда docker run вернула ID контейнера:
 
 63333c619452a7976664549b533ec72f1a17dd804f4ffd52a017b78a54f4727b
 
-docker ps:
+docker ps — контейнер поднят, порт проброшен:
 
 CONTAINER ID   IMAGE           COMMAND                  CREATED        STATUS        PORTS                                          NAMES
 63333c619452   notes-service   "dotnet NotesService…"   7 seconds ago   Up 3 seconds   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   notes-service-container
 
-Ответ GET /notes:
+curl http://localhost:8080/notes:
 
 [{"id":1,"title":"Покупки","text":"Молоко, хлеб, кофе","created_at":"2026-10-27T00:00:00"},{"id":2,"title":"Идеи для проекта","text":"Сделать API заметок и собрать его в Docker","created_at":"2026-10-28T00:00:00"},{"id":3,"title":"Учёба","text":"Дочитать конспект по ASP.NET Core","created_at":"2026-10-29T00:00:00"}]
 
-docker logs notes-service-container:
+docker logs notes-service-container — видно, что сервис слушает нужный порт:
 
 warn: Microsoft.AspNetCore.Hosting.Diagnostics[15]
       Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://0.0.0.0:8080'.
@@ -90,10 +79,8 @@ info: Microsoft.Hosting.Lifetime[0]
 info: Microsoft.Hosting.Lifetime[0]
       Content root path: /app
 
-## Основные команды
+## Что ещё пригодится
 
-docker build -t notes-service . - сборка образа
-docker run -d -p 8080:8080 --name notes-service-container notes-service - запуск контейнера
-docker ps - список запущенных контейнеров
-docker logs notes-service-container - логи контейнера
-docker stop notes-service-container - остановить контейнер
+docker stop notes-service-container — остановить контейнер
+docker rm notes-service-container — удалить, чтобы запустить заново
+docker images — проверить, что образ на месте
